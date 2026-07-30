@@ -3,9 +3,10 @@
 
 #include "driver/spi_master.h"
 #include "esp_err.h"
+#include "include/math.h"
 
 #define TFT_SCENE_OBJECT_MAX 32
-// Save on memory at the cost of max FPS. Must divide the screen height with no remainder.
+// Save on memory at the cost of max FPS.
 #define TFT_SCANLINE_HEIGHT 32
 
 typedef struct {
@@ -22,11 +23,6 @@ typedef enum
     OBJECT_TRIANGLE,
     OBJECT_LINE
 } scene_object_type_t;
-
-typedef struct {
-    int16_t x;
-    int16_t y;
-} vector2_t;
 
 typedef struct {
     int32_t step_x;

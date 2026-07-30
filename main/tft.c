@@ -365,6 +365,17 @@ void update_scanline_residents() {
             start_scanline = (obj->y - obj->circle.radius) / TFT_SCANLINE_HEIGHT;
             end_scanline = (obj->y + obj->circle.radius) / TFT_SCANLINE_HEIGHT;
             break;
+        case OBJECT_LINE: {
+            int16_t line_min_y = MIN(obj->y, obj->line.y_end);
+            int16_t line_max_y = MAX(obj->y, obj->line.y_end);
+            start_scanline = line_min_y / TFT_SCANLINE_HEIGHT;
+            end_scanline = line_max_y / TFT_SCANLINE_HEIGHT;
+            break;
+        }
+        case OBJECT_TRIANGLE:
+            start_scanline = obj->triangle.min_y / TFT_SCANLINE_HEIGHT;
+            end_scanline = obj->triangle.max_y / TFT_SCANLINE_HEIGHT;
+            break;
         default:
             break;
         }
@@ -510,8 +521,11 @@ scene_object_t *tft_add_line(
     obj->line.color = color;
     obj->line.stroke = stroke;
 
-    int16_t start_scanline = obj->y / TFT_SCANLINE_HEIGHT;
-    int16_t end_scanline = obj->line.y_end / TFT_SCANLINE_HEIGHT;
+    int16_t line_min_y = MIN(obj->y, obj->line.y_end);
+    int16_t line_max_y = MAX(obj->y, obj->line.y_end);
+
+    int16_t start_scanline = line_min_y / TFT_SCANLINE_HEIGHT;
+    int16_t end_scanline = line_max_y / TFT_SCANLINE_HEIGHT;
 
     uint16_t total_scanlines = tft_scanline_count();
 
@@ -565,16 +579,20 @@ scene_object_t *tft_add_triangle(vector2_t vertices[3], uint16_t color) {
     return obj;
 }
 
-static void tft_render_line(
+static void tft_line_low(
     int16_t scan_y_px_start, int16_t x_start, int16_t y_start, int16_t x_end, int16_t y_end, uint16_t color) {
-    // Bresenham line
-    int16_t dx = abs(x_end - x_start);
-    int16_t dy = abs(y_end - y_start);
+    int16_t dx = x_end - x_start;
+    int16_t dy = y_end - y_start;
+    int16_t yi = 1;
 
-    int16_t p = 2 * dy - dx;
+    if (dy < 0) {
+        yi = -1;
+        dy = -dy;
+    }
 
-    int16_t two_dy = 2 * dy;
-    int16_t two_dy_dx = 2 * (dy - dx);
+    int16_t d = 2 * dy - dx;
+
+    int16_t y = y_start;
 
     int16_t scanline_row = y_start - scan_y_px_start;
 
@@ -583,21 +601,79 @@ static void tft_render_line(
         scanline[(scanline_row * curr_display_width + x_start) * 2 + 1] = color & 0xFF;
     }
 
-    while (x_start < x_end) {
-        x_start++;
+    for (int16_t x = x_start; x < x_end; x++) {
+        if (d > 0) {
+            d = d + (2 * (dy - dx));
+            y = y + yi;
 
-        if (p < 0) {
-            p += two_dy;
         } else {
-            p += two_dy_dx;
-            y_start++;
+            d = d + 2 * dy;
         }
 
-        scanline_row = y_start - scan_y_px_start;
+        scanline_row = y - scan_y_px_start;
 
-        if (x_start >= 0 && x_start < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
-            scanline[(scanline_row * curr_display_width + x_start) * 2] = color >> 8;
-            scanline[(scanline_row * curr_display_width + x_start) * 2 + 1] = color & 0xFF;
+        if (x >= 0 && x < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
+            scanline[(scanline_row * curr_display_width + x) * 2] = color >> 8;
+            scanline[(scanline_row * curr_display_width + x) * 2 + 1] = color & 0xFF;
+        }
+    }
+}
+
+static void tft_line_high(
+    int16_t scan_y_px_start, int16_t x_start, int16_t y_start, int16_t x_end, int16_t y_end, uint16_t color) {
+
+    int16_t dx = x_end - x_start;
+    int16_t dy = y_end - y_start;
+    int16_t xi = 1;
+
+    if (dx < 0) {
+        xi = -1;
+        dx = -dx;
+    }
+
+    int16_t d = 2 * dx - dy;
+
+    int16_t x = x_start;
+
+    int16_t scanline_row = y_start - scan_y_px_start;
+
+    if (x >= 0 && x < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
+        scanline[(scanline_row * curr_display_width + x) * 2] = color >> 8;
+        scanline[(scanline_row * curr_display_width + x) * 2 + 1] = color & 0xFF;
+    }
+
+    for (int16_t y = y_start; y < y_end; y++) {
+        if (d > 0) {
+            d = d + (2 * (dx - dy));
+            x = x + xi;
+
+        } else {
+            d = d + 2 * dx;
+        }
+
+        scanline_row = y - scan_y_px_start;
+
+        if (x >= 0 && x < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
+            scanline[(scanline_row * curr_display_width + x) * 2] = color >> 8;
+            scanline[(scanline_row * curr_display_width + x) * 2 + 1] = color & 0xFF;
+        }
+    }
+}
+
+static void tft_render_line(
+    int16_t scan_y_px_start, int16_t x_start, int16_t y_start, int16_t x_end, int16_t y_end, uint16_t color) {
+    // Bresenham line algorithm straight from Wikipedia
+    if (abs(y_end - y_start) < abs(x_end - x_start)) {
+        if (x_start > x_end) {
+            tft_line_low(scan_y_px_start, x_end, y_end, x_start, y_start, color);
+        } else {
+            tft_line_low(scan_y_px_start, x_start, y_start, x_end, y_end, color);
+        }
+    } else {
+        if (y_start > y_end) {
+            tft_line_high(scan_y_px_start, x_end, y_end, x_start, y_start, color);
+        } else {
+            tft_line_high(scan_y_px_start, x_start, y_start, x_end, y_end, color);
         }
     }
 }
@@ -732,16 +808,31 @@ void tft_render_scene() {
                     break;
                 }
                 case OBJECT_LINE: {
-                    // clang-format off
-                    int16_t y_start = MIN(MAX(obj->y > scan_y_px_start ? obj->y : scan_y_px_start, 0), curr_display_height);
-                    int16_t y_end = MIN(MAX(obj->line.y_end < scan_y_px_end ? obj->line.y_end : scan_y_px_end, 0), curr_display_height);
-                    
-                    float t_start = get_blend_factor(y_start, obj->y, obj->line.y_end);
-                    float t_end = get_blend_factor(y_end, obj->y, obj->line.y_end);
-                    
-                    int16_t x_start = MAX(lerp_i(obj->x, obj->line.x_end, t_start), 0);
-                    int16_t x_end = MIN(lerp_i(obj->x, obj->line.x_end, t_end), curr_display_width);
-                    // clang-format on
+                    int16_t y0 = obj->y;
+                    int16_t y1 = obj->line.y_end;
+                    int16_t x_start = obj->x;
+                    int16_t y_start = y0;
+                    int16_t x_end = obj->line.x_end;
+                    int16_t y_end = y1;
+
+                    if (y0 != y1) {
+                        int16_t line_min_y = MIN(y0, y1);
+                        int16_t line_max_y = MAX(y0, y1);
+
+                        // Clip current segment to this scanline band and display bounds.
+                        y_start = MAX(MAX(line_min_y, scan_y_px_start), 0);
+                        y_end = MIN(MIN(line_max_y, scan_y_px_end), curr_display_height);
+
+                        if (y_start > y_end) {
+                            break;
+                        }
+
+                        float t_start = get_blend_factor(y_start, y0, y1);
+                        float t_end = get_blend_factor(y_end, y0, y1);
+
+                        x_start = lerp_i(obj->x, obj->line.x_end, t_start);
+                        x_end = lerp_i(obj->x, obj->line.x_end, t_end);
+                    }
 
                     if (obj->line.stroke > 1) {
                         // Calculate perpendicular vector (-dy, dx)
@@ -750,7 +841,11 @@ void tft_render_scene() {
 
                         // Normalize
                         int len = MAX(abs(dx), abs(dy)); // Approximate length is good enough here
-                        int px = (-dy * 256) / len;      // Fixed point scaling to avoid floats
+                        if (len == 0) {
+                            tft_render_line(scan_y_px_start, x_start, y_start, x_end, y_end, obj->line.color);
+                            break;
+                        }
+                        int px = (-dy * 256) / len; // Fixed point scaling to avoid floats
                         int py = (dx * 256) / len;
 
                         int half = obj->line.stroke / 2;

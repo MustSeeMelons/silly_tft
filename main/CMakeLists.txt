@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS 
     "utils.c"
+    "math.c"
     "font.c"
     "tft.c"
     "main.c"
@@ -8,6 +9,7 @@ idf_component_register(
     "scenes/egg_fall_scene.c"
     "scenes/line_scene.c"
     "scenes/triangles_scene.c"
+    "scenes/cube.c"
     "utils.c"
     INCLUDE_DIRS "."
 )
