@@ -102,3 +102,21 @@ float get_blend_factor(int16_t value, int16_t value_start, int16_t value_end) {
 int32_t edge_function(vector2_t a, vector2_t b, vector2_t c) {
     return (int32_t)(b.x - a.x) * (c.y - a.y) - (int32_t)(b.y - a.y) * (c.x - a.x);
 }
+
+void perspective_projection(point_vector_t *point,
+                            point_vector_t *pivot,
+                            point_vector_t *screen_point,
+                            float focal_length,
+                            float camera_distance) {
+    float z_cam = (float)point->z + camera_distance;
+
+    if (z_cam < 1.0f) {
+        z_cam = 1.0f;
+    }
+
+    float scale = focal_length / z_cam;
+
+    screen_point->x = (int16_t)(pivot->x + ((float)point->x - pivot->x) * scale);
+    screen_point->y = (int16_t)(pivot->y + ((float)point->y - pivot->y) * scale);
+    screen_point->z = 0;
+}

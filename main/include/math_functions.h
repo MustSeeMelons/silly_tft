@@ -30,4 +30,9 @@ void rotate_point_x(point_vector_t *point, point_vector_t *pivot, float angle_ra
 
 void rotate_point_y(point_vector_t *point, point_vector_t *pivot, float angle_rad);
 
+void perspective_projection(point_vector_t *point,
+                            point_vector_t *pivot,
+                            point_vector_t *screen_point,
+                            float focal_length,
+                            float camera_distance);
 #endif

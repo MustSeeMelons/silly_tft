@@ -57,18 +57,7 @@ void cube_init(void *ctx) {
     for (size_t i = 0; i < sizeof(points) / sizeof(points[0]); i++) {
         point_vector_t transformed = points[i];
 
-        // Project around cube center so farther vertices appear smaller.
-        float z_cam = (float)transformed.z + camera_distance;
-
-        if (z_cam < 1.0f) {
-            z_cam = 1.0f;
-        }
-
-        float scale = focal_length / z_cam;
-
-        screen_points[i].x = (int16_t)(pivot.x + ((float)transformed.x - pivot.x) * scale);
-        screen_points[i].y = (int16_t)(pivot.y + ((float)transformed.y - pivot.y) * scale);
-        screen_points[i].z = 0;
+        perspective_projection(&transformed, &pivot, &screen_points[i], focal_length, camera_distance);
 
         circles[i] = tft_add_circle(screen_points[i].x, screen_points[i].y, 5, get_color565(255, 255, 255));
     }
@@ -93,20 +82,7 @@ void cube_update(void *ctx) {
         rotate_point_y(&transformed, &pivot, angle);
         rotate_point_z(&transformed, &pivot, angle);
 
-        // Adding camera distance
-        float z_cam = (float)transformed.z + camera_distance;
-
-        if (z_cam < 1.0f) {
-            z_cam = 1.0f;
-        }
-
-        // Perspective scale
-        float scale = focal_length / z_cam;
-
-        // Move into local coordinates and scale based on distance from camera, then move back to screen coordinates
-        screen_points[i].x = (int16_t)(pivot.x + ((float)transformed.x - pivot.x) * scale);
-        screen_points[i].y = (int16_t)(pivot.y + ((float)transformed.y - pivot.y) * scale);
-        screen_points[i].z = 0;
+        perspective_projection(&transformed, &pivot, &screen_points[i], focal_length, camera_distance);
 
         circles[i]->x = screen_points[i].x;
         circles[i]->y = screen_points[i].y;
