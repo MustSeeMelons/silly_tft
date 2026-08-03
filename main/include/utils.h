@@ -1,7 +1,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include "include/math.h"
+#include "include/math_functions.h"
 #include "include/tft.h"
 #include "stdint.h"
 

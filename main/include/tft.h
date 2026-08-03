@@ -3,7 +3,7 @@
 
 #include "driver/spi_master.h"
 #include "esp_err.h"
-#include "include/math.h"
+#include "include/math_functions.h"
 
 #define TFT_SCENE_OBJECT_MAX 32
 // Save on memory at the cost of max FPS.

@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS 
     "utils.c"
-    "math.c"
+    "math_functions.c"
     "font.c"
     "tft.c"
     "main.c"
