@@ -6,6 +6,8 @@
 extern uint16_t curr_display_height;
 extern uint16_t curr_display_width;
 
+extern gfx_t *active_gfx;
+
 // clang-format off
 // The original cube vertexes
 point_vector_t points[8] = {
@@ -38,7 +40,7 @@ static void draw_line(uint8_t i, uint8_t j) {
     point_vector_t a = screen_points[i];
     point_vector_t b = screen_points[j];
 
-    lines[line_idx++] = tft_add_line(a.x, a.y, b.x, b.y, get_color565(255, 255, 255), 1);
+    lines[line_idx++] = active_gfx->gfx_add_line(a.x, a.y, b.x, b.y, get_color565(255, 255, 255), 1);
 }
 
 static void update_line(uint8_t i, uint8_t j) {
@@ -59,7 +61,7 @@ void cube_init(void *ctx) {
 
         perspective_projection(&transformed, &pivot, &screen_points[i], focal_length, camera_distance);
 
-        circles[i] = tft_add_circle(screen_points[i].x, screen_points[i].y, 5, get_color565(255, 255, 255));
+        circles[i] = active_gfx->gfx_add_circle(screen_points[i].x, screen_points[i].y, 5, get_color565(255, 255, 255));
     }
 
     for (size_t i = 0; i < 4; i++) {
@@ -68,7 +70,7 @@ void cube_init(void *ctx) {
         draw_line(i, i + 4);
     }
 
-    update_scanline_residents();
+    active_gfx->gfx_global_update();
 }
 
 void cube_update(void *ctx) {
@@ -94,7 +96,7 @@ void cube_update(void *ctx) {
         update_line(i, i + 4);
     }
 
-    update_scanline_residents();
+    active_gfx->gfx_global_update();
 }
 
 scene_t cube_scene = {.scene_init = cube_init, .scene_update = cube_update};

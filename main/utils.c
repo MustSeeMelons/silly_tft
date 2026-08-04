@@ -55,9 +55,3 @@ int16_t get_max_y(vector2_t vertices[3]) {
 
     return max_y;
 }
-
-void swap_int16(int16_t *one, int16_t *other) {
-    int16_t temp = *one;
-    *one = *other;
-    *other = temp;
-}

@@ -15,6 +15,4 @@ int16_t get_max_x(vector2_t vertices[3]);
 
 int16_t get_max_y(vector2_t vertices[3]);
 
-void swap_int16(int16_t *one, int16_t *other);
-
 #endif

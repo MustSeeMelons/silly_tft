@@ -5,6 +5,7 @@
 
 extern uint16_t curr_display_height;
 extern uint16_t curr_display_width;
+extern gfx_t *active_gfx;
 
 scene_object_t *background = NULL;
 scene_object_t *large_circle = NULL;
@@ -18,11 +19,11 @@ uint16_t max_other = 30;
 float t = 0.0f;
 
 void egg_fall_init(void *ctx) {
-    background = tft_add_rectangle(0, 0, curr_display_width, curr_display_height, get_color565(0, 0, 0));
-    large_circle =
-        tft_add_circle(curr_display_width / 2, curr_display_height / 2, min_radius, get_color565(255, 255, 255));
-    small_circle =
-        tft_add_circle(curr_display_width / 2, curr_display_height / 2, min_radius_other, get_color565(255, 255, 0));
+    background = active_gfx->gfx_add_rectangle(0, 0, curr_display_width, curr_display_height, get_color565(0, 0, 0));
+    large_circle = active_gfx->gfx_add_circle(
+        curr_display_width / 2, curr_display_height / 2, min_radius, get_color565(255, 255, 255));
+    small_circle = active_gfx->gfx_add_circle(
+        curr_display_width / 2, curr_display_height / 2, min_radius_other, get_color565(255, 255, 0));
 }
 
 void egg_fall_update(void *ctx) {
@@ -36,7 +37,7 @@ void egg_fall_update(void *ctx) {
     large_circle->circle.radius = radius;
     small_circle->circle.radius = radius_other;
 
-    update_scanline_residents();
+    active_gfx->gfx_global_update();
 }
 
 scene_t egg_fall_scene = {.scene_init = egg_fall_init, .scene_update = egg_fall_update};

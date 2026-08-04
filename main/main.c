@@ -38,28 +38,30 @@ extern scene_t triangles_scene;
 extern scene_t line_scene;
 extern scene_t cube_scene;
 
+gfx_t *active_gfx;
+
 void app_main(void) {
 
     tft_init_config_t config = {.rotation = TFT_Landscape};
 
-    esp_err_t err = tft_init(config);
+    active_gfx = tft_init(config);
 
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize TFT: %s", esp_err_to_name(err));
+    if (active_gfx->error != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize TFT: %s", esp_err_to_name(active_gfx->error));
         return;
     }
 
     cube_scene.scene_init(NULL);
 
     // FPS text should be added last
-    scene_object_t *fps_text = tft_add_text(0, 0, "FPS: 0", 1, get_color565(255, 255, 255));
+    scene_object_t *fps_text = active_gfx->gfx_add_text(0, 0, "FPS: 0", 1, get_color565(255, 255, 255));
 
-    tft_render_scene();
+    active_gfx->gfx_render();
 
     while (1) {
         cube_scene.scene_update(NULL);
 
         app_do_fps(fps_text);
-        tft_render_scene();
+        active_gfx->gfx_render();
     }
 }

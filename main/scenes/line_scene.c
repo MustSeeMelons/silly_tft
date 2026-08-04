@@ -5,10 +5,12 @@
 extern uint16_t curr_display_height;
 extern uint16_t curr_display_width;
 
+extern gfx_t *active_gfx;
+
 scene_object_t *line = NULL;
 
 void lines_init(void *ctx) {
-    line = tft_add_line(0, 0, curr_display_width, curr_display_height, get_color565(0, 255, 0), 1);
+    line = active_gfx->gfx_add_line(0, 0, curr_display_width, curr_display_height, get_color565(0, 255, 0), 1);
 }
 
 void lines_update(void *ctx) {
