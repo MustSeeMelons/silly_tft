@@ -12,5 +12,7 @@ idf_component_register(
     "scenes/triangles_scene.c"
     "scenes/cube.c"
     "utils.c"
+    "display/ili9341.c"
+    "spi_display.c"
     INCLUDE_DIRS "."
 )

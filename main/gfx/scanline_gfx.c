@@ -1,11 +1,14 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "include/defs.h"
+#include "include/display.h"
 #include "include/gfx.h"
 #include "include/math_functions.h"
+#include "include/spi_display.h"
 #include "include/tft.h"
 #include "include/utils.h"
 #include <math.h>
+#include <stdlib.h>
 
 static const char *TAG = "SCANLINE_GFX";
 #define TFT_SCANLINE_HEIGHT 32
@@ -13,26 +16,39 @@ static const char *TAG = "SCANLINE_GFX";
 extern const uint8_t font[96][32];
 extern uint16_t curr_display_height;
 extern uint16_t curr_display_width;
+extern spi_display_t *spi_display;
 
 extern uint16_t scene_object_id_counter;
 extern uint8_t scene_index;
 
+extern gfx_t scanline_gfx;
+
 // Each pixel is a uint_16, 565 bit colors
 // heap_caps_alloc made it slower for some reason
-static uint8_t scanline[TFT_HEIGHT * TFT_SCANLINE_HEIGHT * 2];
+static uint8_t *scanline = NULL;
 
 // Refs to all active objects
 static scene_object_t scene_objects[GFX_SCENE_OBJECT_MAX];
 // Ids of objects currently on each scanline, using larges axis
-static scene_object_t *scanline_residents[TFT_HEIGHT / TFT_SCANLINE_HEIGHT][GFX_SCENE_OBJECT_MAX] = {NULL};
+static scene_object_t *(*scanline_residents)[GFX_SCENE_OBJECT_MAX] = NULL;
+
+static display_config_t *display_config = NULL;
 
 static inline uint16_t get_scanline_count(void) {
     // Integer ceiling division
     return (curr_display_height + TFT_SCANLINE_HEIGHT - 1) / TFT_SCANLINE_HEIGHT;
 }
 
+static inline size_t get_scanline_residents_size(void) {
+    return get_scanline_count() * sizeof(*scanline_residents);
+}
+
 void scanline_global_update() {
-    memset(scanline_residents, 0, sizeof(scanline_residents));
+    if (scanline_residents == NULL) {
+        return;
+    }
+
+    memset(scanline_residents, 0, get_scanline_residents_size());
     uint16_t total_scanlines = get_scanline_count();
 
     for (uint8_t i = 0; i < scene_index; i++) {
@@ -85,7 +101,10 @@ void scanline_global_update() {
 void gfx_reset() {
     scene_index = 0;
     memset(scene_objects, 0, sizeof(scene_objects));
-    memset(scanline_residents, 0, sizeof(scanline_residents));
+
+    if (scanline_residents != NULL) {
+        memset(scanline_residents, 0, get_scanline_residents_size());
+    }
 }
 
 scene_object_t *scanline_add_rectangle(int16_t x, int16_t y, uint16_t width, uint16_t height, uint16_t color) {
@@ -653,12 +672,29 @@ void scanline_render_scene() {
             }
         }
 
-        tft_set_window(0, scan_y_px_start, curr_display_width - 1, scan_y_px_end - 1);
-        tft_send_data(scanline, curr_display_width * scanline_height * 2);
+        display_config->set_window(0, scan_y_px_start, curr_display_width - 1, scan_y_px_end - 1);
+        spi_display->spi_send_data(scanline, curr_display_width * scanline_height * 2);
+    }
+}
+
+void scanline_init(display_config_t *config) {
+    display_config = config;
+
+    scanline_gfx.error = ESP_OK;
+
+    free(scanline);
+    scanline = malloc(display_config->get_width() * TFT_SCANLINE_HEIGHT * 2);
+
+    free(scanline_residents);
+    scanline_residents = calloc(get_scanline_count(), sizeof(*scanline_residents));
+
+    if (scanline == NULL || scanline_residents == NULL) {
+        scanline_gfx.error = ESP_ERR_NO_MEM;
     }
 }
 
 gfx_t scanline_gfx = {
+    .gfx_init = scanline_init,
     .error = ESP_OK,
     .gfx_global_update = scanline_global_update,
     .gfx_reset = gfx_reset,

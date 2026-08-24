@@ -2,11 +2,13 @@
 #define GFX_H_
 
 #include "esp_err.h"
+#include "include/display.h"
 #include "include/font.h"
 #include "include/math_functions.h"
 #include "stdint.h"
 #include <stdbool.h>
 #include <string.h>
+
 
 #define GFX_SCENE_OBJECT_MAX 32
 
@@ -67,6 +69,7 @@ typedef struct {
 
 typedef struct {
     esp_err_t error;
+    void (*gfx_init)(display_config_t *config);
     void (*gfx_reset)(void);
     scene_object_t *(*gfx_add_rectangle)(int16_t x, int16_t y, uint16_t width, uint16_t height, uint16_t color);
     scene_object_t *(*gfx_add_text)(int16_t x, int16_t y, char *text, uint16_t font_size, uint16_t color);

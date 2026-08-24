@@ -3,6 +3,7 @@
 #include "esp_timer.h"
 #include "include/defs.h"
 #include "include/scene.h"
+#include "include/spi_display.h"
 #include "include/tft.h"
 #include "include/utils.h"
 #include <stdio.h>
@@ -38,11 +39,28 @@ extern scene_t triangles_scene;
 extern scene_t line_scene;
 extern scene_t cube_scene;
 
+// The config to use
+extern display_config_t ili9341_display_config;
+
+extern spi_display_t esp_spi;
+spi_display_t *spi_display = &esp_spi;
+
 gfx_t *active_gfx;
 
 void app_main(void) {
+    esp_err_t err = esp_spi.spi_init();
 
-    tft_init_config_t config = {.rotation = TFT_Landscape};
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize SPI: %s", esp_err_to_name(err));
+        return;
+    }
+
+    // clang-format off
+    tft_init_config_t config = {
+        .rotation = TFT_Landscape, 
+        .display_config = &ili9341_display_config
+    };
+    // clang-format on
 
     active_gfx = tft_init(config);
 
