@@ -1,4 +1,4 @@
-#include "include/font.h"
+#include "core/include/font.h"
 
 // A good resource: https://github.com/basti79/LCD-fonts/tree/master, horizontal_LSB
 const char font[96][32] = {

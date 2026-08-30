@@ -16,7 +16,7 @@
   "clangd.arguments": [
     "--background-index",
     "--query-driver=**",
-    "--compile-commands-dir=c:\\Git\\esp_tft\\build"
+    "--compile-commands-dir=c:\\Git\\silly_tft\\build"
   ],
   "idf.flashType": "UART"
 }

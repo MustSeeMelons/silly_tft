@@ -1,12 +1,11 @@
-#include "esp_err.h"
-#include "esp_log.h"
-#include "include/defs.h"
-#include "include/display.h"
-#include "include/gfx.h"
-#include "include/math_functions.h"
-#include "include/spi_display.h"
-#include "include/tft.h"
-#include "include/utils.h"
+#include "core/include/defs.h"
+#include "core/include/display.h"
+#include "core/include/gfx.h"
+#include "core/include/math_functions.h"
+#include "core/include/platform.h"
+#include "core/include/spi_display.h"
+#include "core/include/tft.h"
+#include "core/include/utils.h"
 #include <math.h>
 #include <stdlib.h>
 
@@ -14,8 +13,6 @@ static const char *TAG = "SCANLINE_GFX";
 #define TFT_SCANLINE_HEIGHT 32
 
 extern const uint8_t font[96][32];
-extern uint16_t curr_display_height;
-extern uint16_t curr_display_width;
 extern spi_display_t *spi_display;
 
 extern uint16_t scene_object_id_counter;
@@ -35,8 +32,12 @@ static scene_object_t *(*scanline_residents)[GFX_SCENE_OBJECT_MAX] = NULL;
 static display_config_t *display_config = NULL;
 
 static inline uint16_t get_scanline_count(void) {
+    if (display_config == NULL) {
+        return 0;
+    }
+
     // Integer ceiling division
-    return (curr_display_height + TFT_SCANLINE_HEIGHT - 1) / TFT_SCANLINE_HEIGHT;
+    return (display_config->get_height() + TFT_SCANLINE_HEIGHT - 1) / TFT_SCANLINE_HEIGHT;
 }
 
 static inline size_t get_scanline_residents_size(void) {
@@ -329,6 +330,8 @@ static void scanline_line_low(
 
     int16_t scanline_row = y_start - scan_y_px_start;
 
+    uint16_t curr_display_width = display_config->get_width();
+
     if (x_start >= 0 && x_start < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
         scanline[(scanline_row * curr_display_width + x_start) * 2] = color >> 8;
         scanline[(scanline_row * curr_display_width + x_start) * 2 + 1] = color & 0xFF;
@@ -369,6 +372,8 @@ static void scanline_line_high(
     int16_t x = x_start;
 
     int16_t scanline_row = y_start - scan_y_px_start;
+
+    uint16_t curr_display_width = display_config->get_width();
 
     if (x >= 0 && x < curr_display_width && scanline_row >= 0 && scanline_row < TFT_SCANLINE_HEIGHT) {
         scanline[(scanline_row * curr_display_width + x) * 2] = color >> 8;
@@ -424,14 +429,16 @@ void scanline_update_scene_object(scene_object_t *obj) {
 
 void scanline_render_scene() {
     uint16_t total_scanlines = get_scanline_count();
+    uint16_t curr_display_width = display_config->get_width();
+    uint16_t curr_display_height = display_config->get_height();
 
     // Go through each scanline
     for (size_t scanline_index = 0; scanline_index < total_scanlines; scanline_index++) {
         // Clear scanline
         int16_t scan_y_px_start = scanline_index * TFT_SCANLINE_HEIGHT;
-        int16_t scanline_height = MIN(TFT_SCANLINE_HEIGHT, curr_display_height - scan_y_px_start);
+        int16_t scanline_height = MIN(TFT_SCANLINE_HEIGHT, display_config->get_height() - scan_y_px_start);
 
-        memset(scanline, 0x00, curr_display_width * scanline_height * 2);
+        memset(scanline, 0x00, display_config->get_width() * scanline_height * 2);
 
         // Get the height in pixels so we can decide if we use object height or scanline height for rendering
         int16_t scan_y_px_end = scan_y_px_start + scanline_height;
@@ -662,7 +669,7 @@ void scanline_render_scene() {
                     break;
                 }
                 default:
-                    ESP_LOGI(TAG, "Can't render %d", obj->type);
+                    platform_log(PLATFORM_LOG_LEVEL_INFO, TAG, "Can't render %d", obj->type);
                     break;
                 }
 
@@ -680,7 +687,7 @@ void scanline_render_scene() {
 void scanline_init(display_config_t *config) {
     display_config = config;
 
-    scanline_gfx.error = ESP_OK;
+    scanline_gfx.error = PLATFORM_OK;
 
     free(scanline);
     scanline = malloc(display_config->get_width() * TFT_SCANLINE_HEIGHT * 2);
@@ -689,13 +696,13 @@ void scanline_init(display_config_t *config) {
     scanline_residents = calloc(get_scanline_count(), sizeof(*scanline_residents));
 
     if (scanline == NULL || scanline_residents == NULL) {
-        scanline_gfx.error = ESP_ERR_NO_MEM;
+        scanline_gfx.error = PLATFORM_NO_MEM;
     }
 }
 
 gfx_t scanline_gfx = {
     .gfx_init = scanline_init,
-    .error = ESP_OK,
+    .error = PLATFORM_OK,
     .gfx_global_update = scanline_global_update,
     .gfx_reset = gfx_reset,
     .gfx_add_rectangle = scanline_add_rectangle,

@@ -1,4 +1,6 @@
-#include "include/utils.h"
+#include "core/include/utils.h"
+#include "core/include/platform.h"
+#include <stdio.h>
 
 uint16_t get_color565(uint8_t r, uint8_t g, uint8_t b) {
     uint16_t red = (r & 0xf8) << 8;
@@ -54,4 +56,28 @@ int16_t get_max_y(vector2_t vertices[3]) {
     }
 
     return max_y;
+}
+
+void app_do_fps(scene_object_t *text) {
+    static uint32_t last_frame = 0;
+    static float fps = 0.0f;
+
+    int64_t now = now_ms();
+
+    if (last_frame != 0) {
+        uint32_t frame_time = now - last_frame;
+
+        if (frame_time > 0) {
+            float current_fps = 1000.0f / frame_time;
+
+            // Smooth out sudden changes
+            fps = fps * 0.7f + current_fps * 0.3f;
+        }
+
+        static char fps_text[32];
+        snprintf(fps_text, sizeof(fps_text), "%.1f FPS(%lums)", fps, frame_time);
+        text->text.text = fps_text;
+    }
+
+    last_frame = now;
 }

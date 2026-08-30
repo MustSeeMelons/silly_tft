@@ -1,10 +1,8 @@
-#include "include/scene.h"
-#include "include/tft.h"
-#include "include/utils.h"
+#include "core/include/scene.h"
+#include "core/include/tft.h"
+#include "core/include/utils.h"
 #include <math.h>
 
-extern uint16_t curr_display_height;
-extern uint16_t curr_display_width;
 extern gfx_t *active_gfx;
 
 scene_object_t *background = NULL;
@@ -18,12 +16,13 @@ uint16_t max_other = 30;
 
 float t = 0.0f;
 
-void egg_fall_init(void *ctx) {
-    background = active_gfx->gfx_add_rectangle(0, 0, curr_display_width, curr_display_height, get_color565(0, 0, 0));
+void egg_fall_init(display_config_t *display_config) {
+    background = active_gfx->gfx_add_rectangle(
+        0, 0, display_config->get_width(), display_config->get_height(), get_color565(0, 0, 0));
     large_circle = active_gfx->gfx_add_circle(
-        curr_display_width / 2, curr_display_height / 2, min_radius, get_color565(255, 255, 255));
+        display_config->get_width() / 2, display_config->get_height() / 2, min_radius, get_color565(255, 255, 255));
     small_circle = active_gfx->gfx_add_circle(
-        curr_display_width / 2, curr_display_height / 2, min_radius_other, get_color565(255, 255, 0));
+        display_config->get_width() / 2, display_config->get_height() / 2, min_radius_other, get_color565(255, 255, 0));
 }
 
 void egg_fall_update(void *ctx) {

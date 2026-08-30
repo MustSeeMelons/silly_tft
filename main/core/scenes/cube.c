@@ -1,32 +1,19 @@
-#include "esp_log.h"
-#include "include/scene.h"
-#include "include/tft.h"
-#include "include/utils.h"
-
-extern uint16_t curr_display_height;
-extern uint16_t curr_display_width;
+#include "core/include/scene.h"
+#include "core/include/tft.h"
+#include "core/include/utils.h"
 
 extern gfx_t *active_gfx;
 
 // clang-format off
-// The original cube vertexes
-point_vector_t points[8] = {
-    {.x = 120, .y = 80, .z = -40},
-    {.x = 200, .y = 80, .z = -40},
-    {.x = 200, .y = 160, .z = -40},
-    {.x = 120, .y = 160, .z = -40},
-    {.x = 120, .y = 80, .z = 40},
-    {.x = 200, .y = 80, .z = 40},
-    {.x = 200, .y = 160, .z = 40},
-    {.x = 120, .y = 160, .z = 40}
-};
+// The original cube vertexes — populated dynamically in cube_init
+point_vector_t points[8];
 
 // Working copy of the vertexes for a frame
 point_vector_t screen_points[8];
 // clang-format on
 
-// Rotation pivot point (center of the cube)
-point_vector_t pivot = {.x = 160, .y = 120, .z = 0};
+// Rotation pivot point (center of the cube) — set dynamically in cube_init
+point_vector_t pivot;
 
 float angle = 0;
 float camera_distance = 150.0f;
@@ -55,7 +42,21 @@ static void update_line(uint8_t i, uint8_t j) {
     line->line.y_end = b.y;
 }
 
-void cube_init(void *ctx) {
+void cube_init(display_config_t *display_config) {
+    int16_t cx = display_config->get_width() / 2;
+    int16_t cy = display_config->get_height() / 2;
+    int16_t h = 40; // cube half-size in pixels
+    pivot = (point_vector_t){.x = cx, .y = cy, .z = 0};
+
+    points[0] = (point_vector_t){.x = cx - h, .y = cy - h, .z = -h};
+    points[1] = (point_vector_t){.x = cx + h, .y = cy - h, .z = -h};
+    points[2] = (point_vector_t){.x = cx + h, .y = cy + h, .z = -h};
+    points[3] = (point_vector_t){.x = cx - h, .y = cy + h, .z = -h};
+    points[4] = (point_vector_t){.x = cx - h, .y = cy - h, .z = h};
+    points[5] = (point_vector_t){.x = cx + h, .y = cy - h, .z = h};
+    points[6] = (point_vector_t){.x = cx + h, .y = cy + h, .z = h};
+    points[7] = (point_vector_t){.x = cx - h, .y = cy + h, .z = h};
+
     for (size_t i = 0; i < sizeof(points) / sizeof(points[0]); i++) {
         point_vector_t transformed = points[i];
 

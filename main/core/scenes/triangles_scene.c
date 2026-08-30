@@ -1,14 +1,12 @@
-#include "include/scene.h"
-#include "include/tft.h"
-#include "include/utils.h"
+#include "core/include/scene.h"
+#include "core/include/tft.h"
+#include "core/include/utils.h"
 
-extern uint16_t curr_display_height;
-extern uint16_t curr_display_width;
 extern gfx_t *active_gfx;
 
 scene_object_t *triangle = NULL;
 
-void triangles_init(void *ctx) {
+void triangles_init(display_config_t *display_config) {
     // clang-format off
     triangle = active_gfx->gfx_add_triangle((vector2_t[3]){
         {.x = 50, .y = 10},

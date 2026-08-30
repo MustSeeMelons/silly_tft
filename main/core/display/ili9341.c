@@ -1,6 +1,6 @@
-#include "include/display.h"
-#include "include/spi_display.h"
-#include "include/tft.h"
+#include "core/include/display.h"
+#include "core/include/spi_display.h"
+#include "core/include/tft.h"
 
 #define C_SOFT_RESET                          0x01
 #define C_READ_DISPLAY_ID                     0x04
@@ -88,13 +88,18 @@
 #define C_ENABLE_3G                  0xF2
 #define C_PUMP_RATIO_CONTROL         0xF7
 
+#define ILI9341_MADCTL_PORTRAIT          0x40
+#define ILI9341_MADCTL_LANDSCAPE         0x20
+#define ILI9341_MADCTL_PORTRAIT_FLIPPED  0x80
+#define ILI9341_MADCTL_LANDSCAPE_FLIPPED 0xE0
+
 #define TFT_HEIGHT 320
 #define TFT_WIDTH  240
 
 extern spi_display_t *spi_display;
 
-uint16_t curr_display_height;
-uint16_t curr_display_width;
+static uint16_t curr_display_height;
+static uint16_t curr_display_width;
 
 lcd_init_cmd_t ili_init_cmds[] = {
     {C_POWER_CONTROL_B, {0x00, 0x83, 0X30}, 3},
@@ -147,25 +152,25 @@ void ili9341_patch_init_commands(tft_rotation_t rotation) {
         curr_display_width = TFT_WIDTH;
         curr_display_height = TFT_HEIGHT;
 
-        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){TFT_Portrait}, 1);
+        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){ILI9341_MADCTL_PORTRAIT}, 1);
         break;
     case TFT_Landscape:
         curr_display_width = TFT_HEIGHT;
         curr_display_height = TFT_WIDTH;
 
-        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){TFT_Landscape}, 1);
+        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){ILI9341_MADCTL_LANDSCAPE}, 1);
         break;
     case TFT_Portrait_Flipped:
         curr_display_width = TFT_WIDTH;
         curr_display_height = TFT_HEIGHT;
 
-        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){TFT_Portrait_Flipped}, 1); 
+        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){ILI9341_MADCTL_PORTRAIT_FLIPPED}, 1); 
         break;
     case TFT_Landscape_Flipped:
         curr_display_width = TFT_HEIGHT;
         curr_display_height = TFT_WIDTH;
 
-        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){TFT_Landscape_Flipped}, 1);
+        ili9341_set_command_data(C_MEMORY_ACCESS_CONTROL, (uint8_t[]){ILI9341_MADCTL_LANDSCAPE_FLIPPED}, 1);
         break;
     default:
         break;

@@ -1,22 +1,16 @@
-#include "include/tft.h"
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_random.h"
-#include "include/definitions.h"
-#include "include/display.h"
-#include "include/gfx.h"
-#include "include/spi_display.h"
-#include "include/utils.h"
+#include "core/include/tft.h"
+#include "core/include/defs.h"
+#include "core/include/display.h"
+#include "core/include/gfx.h"
+#include "core/include/platform.h"
+#include "core/include/spi_display.h"
+#include "core/include/utils.h"
 #include "math.h"
 #include <string.h>
 
 extern spi_display_t *spi_display;
 
-extern uint16_t curr_display_height;
-extern uint16_t curr_display_width;
-
 extern gfx_t scanline_gfx;
-extern lcd_init_cmd_t ili_init_cmds[];
 
 static display_config_t *config = NULL;
 
@@ -25,8 +19,6 @@ gfx_t *tft_init(tft_init_config_t init_config) {
 
     // Apply rotation to init commands
     lcd_init_cmd_t *lcd_init_cmds = config->display_init_commands(init_config.rotation);
-
-    gpio_set_level(TFT_LED, 0);
 
     uint8_t init_cmd_index = 0;
 
@@ -40,13 +32,13 @@ gfx_t *tft_init(tft_init_config_t init_config) {
         }
 
         if (lcd_init_cmds[init_cmd_index].dataCount & 0x80) { // High bit signals delay
-            vTaskDelay(pdMS_TO_TICKS(100));
+            delay_ms(100);
         }
 
         init_cmd_index++;
     }
 
-    gpio_set_level(TFT_LED, 1);
+    platform_set_led(true);
 
     scanline_gfx.gfx_init(config);
 
@@ -59,20 +51,20 @@ void tft_reset() {
 }
 
 void tft_clear() {
-    config->set_window(0, 0, curr_display_width - 1, curr_display_height - 1);
+    config->set_window(0, 0, config->get_width() - 1, config->get_height() - 1);
 
     uint16_t color = 0x0000;
 
     // Use the largest axis
-    uint8_t line[curr_display_width * 2];
+    uint8_t line[config->get_width() * 2];
 
     // XXX Line by line is inneficent
-    for (int x = 0; x < curr_display_width; x++) {
+    for (int x = 0; x < config->get_width(); x++) {
         line[x * 2] = color >> 8;
         line[x * 2 + 1] = color & 0xFF;
     }
 
-    for (int y = 0; y < curr_display_height; y++) {
+    for (int y = 0; y < config->get_height(); y++) {
         spi_display->spi_send_data(line, sizeof(line));
     }
 }

@@ -1,14 +1,10 @@
 #ifndef TFT_H_
 #define TFT_H_
 
-#include "driver/spi_master.h"
-#include "esp_err.h"
-#include "include/definitions.h"
-#include "include/display.h"
-#include "include/gfx.h"
-#include "include/math_functions.h"
-
-#define TFT_LED 23 // Backlight
+#include "core/include/defs.h"
+#include "core/include/display.h"
+#include "core/include/gfx.h"
+#include "core/include/math_functions.h"
 
 typedef struct {
     display_config_t *display_config;

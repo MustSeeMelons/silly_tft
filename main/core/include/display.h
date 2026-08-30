@@ -1,7 +1,7 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
-#include "include/definitions.h"
+#include "core/include/defs.h"
 #include "stdint.h"
 
 typedef struct {

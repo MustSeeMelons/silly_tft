@@ -1,9 +1,22 @@
-# ILI9341
+# Silly TFT
 
-This is a playful learning experience driving an ILI9341 TFT display module resulting in a simple library.
-It exposes almost no options because it is not supposed to be a full library.
+Started as a basic ILI9341 ESP driver/graphics playground and morphed into a agnostic display module library.
 
-It implements a scanline rasterizer which can:
+Options are exposed once the need arises.
+
+Why silly? There are other libraries that do the same thing with more features and optimization - this is a playground.
+
+## Display modules
+
+Currently works with these modules. Other modules can be added by implementing the `display_config_t` struct.
+
+### ILI9341
+
+### GC9A01
+
+## Graphics
+
+Implements a scanline rasterizer which can:
 
 - Render rectangles
 - Circles
@@ -12,26 +25,24 @@ It implements a scanline rasterizer which can:
 - Triangles
 
 Upon adding something you get a handle to edit the objects properties. 
-Animations can be done using scenes.
+Animations can be done using scenes, see `scene_t`.
+
+Other rasterizers can be added by implementing the `gfx_t` struct.
 
 ## Datasheet
-
-Can be found here: https://cdn-shop.adafruit.com/datasheets/ILI9341.pdf
-ILI9341 init sample: https://github.com/espressif/esp-idf/blob/2060ee9a548a0975bd7c5d690230f6d332f5054f/examples/peripherals/spi_master/main/spi_master_example_main.c
 
 ESP32: https://documentation.espressif.com/esp32_technical_reference_manual_en.pdf
 
 ## Structure
 
-- `tft.h/c` handles the display driver init and operation (probably should be split per driver IC)
-- `gfx.h` describes the graphics API
-- `gfx.c` has some helper variables
-- `scanline_gfx.c` implements a scanline renderer
-- `scene.h` describes what a scene should implement
+- `core/include/spi_display_t.h`: transport layer defintion, like SPI
+- `core/include/display.h`: display driver module flow implementation
+- `core/include/gfx.h`: graphics context definition, like the scanline one
+- `core/include/platform.h`: MCU specific necessary callbacks, like delay, timestamps, logging
 
 # Logic Analyzer
 
-Channel 0 = Clock 
+Channel 0 = Clock
 
 Channel 1 = MISO
 
@@ -39,9 +50,8 @@ Channel 2 = DCX
 
 Channel 3 = CX
 
-# TODO/Wishlist
+# Future?
 
-- Add another IC support?
 - Positions for each scene object (some already have this) for easy movement across the screen
 - Polygons (would be required if we wish to rotate a rectangle)
 - Object rotation (Triangles/Polygons)
