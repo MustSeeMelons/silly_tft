@@ -86,7 +86,7 @@ void app_main(void) {
     cube_scene.scene_init(&gc9a01_display_config);
 
     // FPS text should be added last
-    scene_object_t *fps_text = active_gfx->gfx_add_text(40, 35, "FPS: 0", 1, get_color565(255, 255, 255));
+    scene_object_t *fps_text = active_gfx->gfx_add_text(40, 35, "FPS: 0", 1, get_color565(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP);
 
     active_gfx->gfx_render();
 

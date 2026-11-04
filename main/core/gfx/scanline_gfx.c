@@ -11,6 +11,7 @@
 
 static const char *TAG = "SCANLINE_GFX";
 #define TFT_SCANLINE_HEIGHT 32
+#define TFT_FONT_SPACING    1
 
 extern const uint8_t font[96][32];
 extern spi_display_t *spi_display;
@@ -30,6 +31,47 @@ static scene_object_t scene_objects[GFX_SCENE_OBJECT_MAX];
 static scene_object_t *(*scanline_residents)[GFX_SCENE_OBJECT_MAX] = NULL;
 
 static display_config_t *display_config = NULL;
+
+// Total rendered size of the text (width includes per-char spacing, minus trailing spacing)
+static void get_text_size(const scene_object_t *obj, int16_t *width, int16_t *height) {
+    // Only count characters the renderer actually draws (same guard as the render loop)
+    uint16_t len = 0;
+    for (const char *p = obj->text.text; *p; p++) {
+        if (*p >= FONT_CHAR_START && *p <= FONT_CHAR_END) {
+            len++;
+        }
+    }
+
+    // Pixels a character advances, including its trailing spacing
+    int16_t char_advance = (FONT_WIDTH + TFT_FONT_SPACING) * obj->text.font_size;
+
+    *width = (len > 0) ? (int16_t)(len * char_advance - obj->text.font_size) : 0;
+    *height = FONT_HEIGHT * obj->text.font_size;
+}
+
+// Offset from the anchor to the left edge of the text, based on x alignment
+static inline int16_t get_text_x_offset(int16_t width, text_align_x_t align_x) {
+    switch (align_x) {
+    case TEXT_ALIGN_CENTER:
+        return -(width / 2);
+    case TEXT_ALIGN_RIGHT:
+        return -width;
+    default:
+        return 0;
+    }
+}
+
+// Offset from the anchor to the top edge of the text, based on y alignment
+static inline int16_t get_text_y_offset(int16_t height, text_align_y_t align_y) {
+    switch (align_y) {
+    case TEXT_ALIGN_MIDDLE:
+        return -(height / 2);
+    case TEXT_ALIGN_BOTTOM:
+        return -height;
+    default:
+        return 0;
+    }
+}
 
 static inline uint16_t get_scanline_count(void) {
     if (display_config == NULL) {
@@ -62,9 +104,14 @@ void scanline_global_update() {
         case OBJECT_RECTANGLE:
             end_scanline = (obj->y + obj->rectangle.height) / TFT_SCANLINE_HEIGHT;
             break;
-        case OBJECT_TEXT:
-            end_scanline = (obj->y + FONT_HEIGHT * obj->text.font_size) / TFT_SCANLINE_HEIGHT;
+        case OBJECT_TEXT: {
+            int16_t text_height = FONT_HEIGHT * obj->text.font_size;
+            int16_t text_y = obj->y + get_text_y_offset(text_height, obj->text.align_y);
+
+            start_scanline = text_y / TFT_SCANLINE_HEIGHT;
+            end_scanline = (text_y + text_height) / TFT_SCANLINE_HEIGHT;
             break;
+        }
         case OBJECT_CIRCLE:
             start_scanline = (obj->y - obj->circle.radius) / TFT_SCANLINE_HEIGHT;
             end_scanline = (obj->y + obj->circle.radius) / TFT_SCANLINE_HEIGHT;
@@ -181,7 +228,13 @@ scene_object_t *scanline_add_circle(int16_t x, int16_t y, uint16_t radius, uint1
     return obj;
 }
 
-scene_object_t *scanline_add_text(int16_t x, int16_t y, char *text, uint16_t font_size, uint16_t color) {
+scene_object_t *scanline_add_text(int16_t x,
+                                  int16_t y,
+                                  char *text,
+                                  uint16_t font_size,
+                                  uint16_t color,
+                                  text_align_x_t align_x,
+                                  text_align_y_t align_y) {
     if (scene_index >= GFX_SCENE_OBJECT_MAX) {
         return NULL;
     }
@@ -195,9 +248,14 @@ scene_object_t *scanline_add_text(int16_t x, int16_t y, char *text, uint16_t fon
     obj->text.text = text;
     obj->text.font_size = font_size;
     obj->text.color = color;
+    obj->text.align_x = align_x;
+    obj->text.align_y = align_y;
 
-    int16_t start_scanline = obj->y / TFT_SCANLINE_HEIGHT;
-    int16_t end_scanline = (obj->y + FONT_HEIGHT * font_size) / TFT_SCANLINE_HEIGHT;
+    int16_t text_height = FONT_HEIGHT * font_size;
+    int16_t text_y = obj->y + get_text_y_offset(text_height, obj->text.align_y);
+
+    int16_t start_scanline = text_y / TFT_SCANLINE_HEIGHT;
+    int16_t end_scanline = (text_y + text_height) / TFT_SCANLINE_HEIGHT;
 
     uint16_t total_scanlines = get_scanline_count();
 
@@ -470,15 +528,21 @@ void scanline_render_scene() {
                     break;
                 }
                 case OBJECT_TEXT: {
+                    int16_t text_width, text_height;
+                    get_text_size(obj, &text_width, &text_height);
+
+                    int16_t text_x = obj->x + get_text_x_offset(text_width, obj->text.align_x);
+                    int16_t text_y = obj->y + get_text_y_offset(text_height, obj->text.align_y);
+
                     // clang-format off
-                    int16_t y_start = MAX(0, obj->y > scan_y_px_start ? obj->y : scan_y_px_start);
-                    int16_t y_end = MIN(obj->y + FONT_HEIGHT * obj->text.font_size < scan_y_px_end ? obj->y + FONT_HEIGHT * obj->text.font_size : scan_y_px_end, curr_display_height);
+                    int16_t y_start = MAX(0, text_y > scan_y_px_start ? text_y : scan_y_px_start);
+                    int16_t y_end = MIN(text_y + text_height < scan_y_px_end ? text_y + text_height : scan_y_px_end, curr_display_height);
                     // clang-format on
 
                     // Render strip of the text
                     for (int16_t y = y_start; y < y_end; y++) {
                         // How many px of the text have been rendered so far
-                        int16_t rendered_px = y - obj->y;
+                        int16_t rendered_px = y - text_y;
                         // Which row of the glyph we are on
                         int16_t glyph_row = rendered_px / obj->text.font_size;
                         // Which row of the scanline we are on
@@ -487,6 +551,8 @@ void scanline_render_scene() {
                         // Iterate over each character
                         char *text = obj->text.text;
 
+                        // Pixels a character advances, including its trailing spacing
+                        int16_t char_advance = (FONT_WIDTH + TFT_FONT_SPACING) * obj->text.font_size;
                         int16_t char_counter = 0;
 
                         while (*text) {
@@ -505,7 +571,7 @@ void scanline_render_scene() {
                             // Iterate over each bit
                             for (uint8_t bit = 0; bit < FONT_WIDTH; bit++) {
                                 int16_t character_x_base =
-                                    obj->x + char_counter + ((FONT_WIDTH - bit - 1) * obj->text.font_size);
+                                    text_x + char_counter + ((FONT_WIDTH - bit - 1) * obj->text.font_size);
 
                                 // Use top FONT_WIDTH bits from the 16-bit row container.
                                 if ((char_row_data >> (15 - bit)) & 0x1) {
@@ -525,7 +591,7 @@ void scanline_render_scene() {
                                 }
                             }
 
-                            char_counter += FONT_WIDTH * obj->text.font_size + obj->text.font_size;
+                            char_counter += char_advance;
                             text++;
                         }
                     }

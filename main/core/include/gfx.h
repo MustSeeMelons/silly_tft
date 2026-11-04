@@ -6,7 +6,6 @@
 #include "core/include/font.h"
 #include "core/include/math_functions.h"
 #include "stdint.h"
-#include <stdbool.h>
 #include <string.h>
 
 #define GFX_SCENE_OBJECT_MAX 32
@@ -19,6 +18,20 @@ typedef enum
     OBJECT_TRIANGLE,
     OBJECT_LINE
 } scene_object_type_t;
+
+typedef enum
+{
+    TEXT_ALIGN_LEFT,
+    TEXT_ALIGN_CENTER,
+    TEXT_ALIGN_RIGHT
+} text_align_x_t;
+
+typedef enum
+{
+    TEXT_ALIGN_TOP,
+    TEXT_ALIGN_MIDDLE,
+    TEXT_ALIGN_BOTTOM
+} text_align_y_t;
 
 typedef struct {
     int32_t step_x;
@@ -39,8 +52,9 @@ typedef struct {
         struct {
             char *text;
             uint16_t font_size;
-            uint16_t width;
             uint16_t color;
+            text_align_x_t align_x;
+            text_align_y_t align_y;
         } text;
         struct {
             uint16_t radius;
@@ -71,7 +85,13 @@ typedef struct {
     void (*gfx_init)(display_config_t *config);
     void (*gfx_reset)(void);
     scene_object_t *(*gfx_add_rectangle)(int16_t x, int16_t y, uint16_t width, uint16_t height, uint16_t color);
-    scene_object_t *(*gfx_add_text)(int16_t x, int16_t y, char *text, uint16_t font_size, uint16_t color);
+    scene_object_t *(*gfx_add_text)(int16_t x,
+                                    int16_t y,
+                                    char *text,
+                                    uint16_t font_size,
+                                    uint16_t color,
+                                    text_align_x_t align_x,
+                                    text_align_y_t align_y);
     scene_object_t *(*gfx_add_circle)(int16_t x, int16_t y, uint16_t radius, uint16_t color);
     scene_object_t *(*gfx_add_triangle)(vector2_t vertices[3], uint16_t color);
     scene_object_t *(*gfx_add_line)(

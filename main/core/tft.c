@@ -15,6 +15,8 @@ extern gfx_t scanline_gfx;
 static display_config_t *config = NULL;
 
 gfx_t *tft_init(tft_init_config_t init_config) {
+    platform_set_led(false);
+
     config = init_config.display_config;
 
     // Apply rotation to init commands
@@ -55,7 +57,7 @@ void tft_clear() {
 
     uint16_t color = 0x0000;
 
-    // Use the largest axis
+    // One full row of pixels
     uint8_t line[config->get_width() * 2];
 
     // XXX Line by line is inneficent
